@@ -2,6 +2,7 @@ const express = require("express");
 const { open } = require("sqlite");
 const sqlite3 = require("sqlite3");
 const path = require("path");
+const bcrypt = require("bcrypt");
 
 const databasePath = path.join(__dirname, "userData.db");
 
@@ -86,16 +87,17 @@ app.post("/login", async (request, response) => {
     }
   }
 });
+
 //3
 
 app.put("/change-password", async (request, response) => {
   const { username, oldPassword, newPassword } = request.body;
-  const selectUserQuery = `SELECT * FROM user WHERE username = '${username}';`;
-  const databaseUser = await database.get(selectUserQuery);
+  const checkUserQuery = `SELECT * FROM user WHERE username = '${username}';`;
+  const databaseUser = await database.get(checkUserQuery);
 
   if (databaseUser === undefined) {
     response.status(400);
-    response.send("Invalid user");
+    response.send("User not Registered");
   } else {
     const isPasswordMatched = await bcrypt.compare(
       oldPassword,
@@ -103,17 +105,17 @@ app.put("/change-password", async (request, response) => {
     );
     if (isPasswordMatched === true) {
       if (validatePassword(password)) {
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const encryptedPassword = await bcrypt.hash(password, 10);
         const updatePasswordQuery = `
           UPDATE 
           user 
           SET 
-          password = '${hashedPassword}';
+          password = '${encryptedPassword}';
           WHERE 
           username = '${username}';
           `;
 
-        const user = await database.run(updatePasswordQuery);
+        await database.run(updatePasswordQuery);
         response.send("Password updated");
       } else {
         response.status(400);
